@@ -78,6 +78,12 @@ func setupHandler(ctx context.Context, b *bot.Bot, update *models.Update) {
 		parts := strings.Split(update.Message.Text, "/setup")
 		if len(parts) < 2 {
 			respond(ctx, update, b, "please provide your resume too. Like '/setup ...'")
+			return
+		}
+
+		if len(parts[1]) < 1 {
+			respond(ctx, update, b, "resume too short")
+			return
 		}
 
 		resumeText := parts[1]
@@ -102,6 +108,12 @@ func generateHandler(ctx context.Context, b *bot.Bot, update *models.Update) {
 		parts := strings.Split(update.Message.Text, "/generate")
 		if len(parts) < 2 {
 			respond(ctx, update, b, "please provide job description too. Like '/generate ...'")
+			return
+		}
+
+		if len(parts[1]) < 1 {
+			respond(ctx, update, b, "job description too short")
+			return
 		}
 
 		jobDescription := parts[1]
