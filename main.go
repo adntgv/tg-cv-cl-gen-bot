@@ -65,6 +65,8 @@ func main() {
 	b.RegisterHandler(bot.HandlerTypeMessageText, "/setup", bot.MatchTypePrefix, setupHandler)
 	b.RegisterHandler(bot.HandlerTypeMessageText, "/generate", bot.MatchTypePrefix, generateHandler)
 
+	createResumesFileIfNotExists()
+
 	go b.Start(ctx)
 
 	port := os.Getenv("PORT")
@@ -77,6 +79,14 @@ func main() {
 
 	log.Println("Listening on port", port)
 	log.Fatal(http.ListenAndServe(fmt.Sprintf(":%s", port), nil))
+}
+
+func createResumesFileIfNotExists() {
+	f, err := os.OpenFile("resumes.json", os.O_APPEND|os.O_CREATE|os.O_WRONLY, 0644)
+	if err != nil {
+		log.Fatal(err)
+	}
+	f.Close()
 }
 
 func HelloHandler(w http.ResponseWriter, _ *http.Request) {
