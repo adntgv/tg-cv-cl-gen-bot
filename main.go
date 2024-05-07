@@ -6,6 +6,7 @@ import (
 	"fmt"
 	"io"
 	"log"
+	"net/http"
 	"os"
 	"os/signal"
 	"strings"
@@ -64,7 +65,22 @@ func main() {
 	b.RegisterHandler(bot.HandlerTypeMessageText, "/setup", bot.MatchTypePrefix, setupHandler)
 	b.RegisterHandler(bot.HandlerTypeMessageText, "/generate", bot.MatchTypePrefix, generateHandler)
 
-	b.Start(ctx)
+	go b.Start(ctx)
+
+	port := os.Getenv("PORT")
+
+	if port == "" {
+		port = "8000"
+	}
+
+	http.HandleFunc("/", HelloHandler)
+
+	log.Println("Listening on port", port)
+	log.Fatal(http.ListenAndServe(fmt.Sprintf(":%s", port), nil))
+}
+
+func HelloHandler(w http.ResponseWriter, _ *http.Request) {
+	fmt.Fprintf(w, "Hello from Koyeb\n")
 }
 
 func helloHandler(ctx context.Context, b *bot.Bot, update *models.Update) {
