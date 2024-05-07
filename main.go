@@ -2,7 +2,9 @@ package main
 
 import (
 	"context"
+	"errors"
 	"fmt"
+	"io"
 	"log"
 	"os"
 	"os/signal"
@@ -96,10 +98,10 @@ func setupHandler(ctx context.Context, b *bot.Bot, update *models.Update) {
 }
 
 func respond(ctx context.Context, update *models.Update, b *bot.Bot, message string) {
+	log.Println("respond", message)
 	b.SendMessage(ctx, &bot.SendMessageParams{
-		ChatID:    update.Message.Chat.ID,
-		Text:      message,
-		ParseMode: models.ParseModeMarkdown,
+		ChatID: update.Message.Chat.ID,
+		Text:   message,
 	})
 }
 
@@ -142,8 +144,10 @@ func handler(ctx context.Context, b *bot.Bot, update *models.Update) {
 	})
 }
 
+var template = "Generate %v in simple text, but with spaces, comas and indents and etc from this job description and resume: JOB DESCRIPTION: %v; RESUME:%v. Be sure to fill all placeholders, or out request won't be accepted. Make it short, and straigh to the point"
+
 func generateResume(jd string, cv string) string {
-	request := fmt.Sprintf("Generate %v from this job description and resume: JOB DESCRIPTION: %v; RESUME:%v", "new tailored resume", jd, cv)
+	request := fmt.Sprintf(template, "new tailored resume", jd, cv)
 
 	res, err := getCompletion(request)
 	if err != nil {
@@ -154,7 +158,7 @@ func generateResume(jd string, cv string) string {
 	return res
 }
 func generateCoverLetter(jd string, cv string) string {
-	request := fmt.Sprintf("Generate %v from this job description and resume: JOB DESCRIPTION: %v; RESUME:%v", "tailored cover letter", jd, cv)
+	request := fmt.Sprintf(template, "tailored cover letter", jd, cv)
 
 	res, err := getCompletion(request)
 	if err != nil {
@@ -166,24 +170,46 @@ func generateCoverLetter(jd string, cv string) string {
 }
 
 func getCompletion(request string) (string, error) {
-	resp, err := client.CreateChatCompletion(
-		context.Background(),
-		openai.ChatCompletionRequest{
-			Model: LLM_MODEL,
-			Messages: []openai.ChatCompletionMessage{
-				{
-					Role:    openai.ChatMessageRoleUser,
-					Content: request,
-				},
+	req := openai.ChatCompletionRequest{
+		Model: LLM_MODEL,
+		Messages: []openai.ChatCompletionMessage{
+			{
+				Role:    openai.ChatMessageRoleUser,
+				Content: request,
 			},
 		},
-	)
+		Stream: true,
+	}
 
+	ctx := context.Background()
+
+	stream, err := client.CreateChatCompletionStream(ctx, req)
 	if err != nil {
+		fmt.Printf("ChatCompletionStream error: %v\n", err)
 		return "", fmt.Errorf("chatCompletion error: %v", err)
 	}
 
-	return resp.Choices[0].Message.Content, nil
+	defer stream.Close()
+
+	fmt.Printf("Stream response: ")
+	resp := ""
+	for {
+		response, err := stream.Recv()
+		if errors.Is(err, io.EOF) {
+			fmt.Println("\nStream finished")
+			break
+		}
+
+		if err != nil {
+			fmt.Printf("\nStream error: %v\n", err)
+			return resp, fmt.Errorf("chatCompletion error: %v", err)
+		}
+
+		resp += response.Choices[0].Delta.Content
+		fmt.Printf(response.Choices[0].Delta.Content)
+	}
+
+	return resp, nil
 }
 
 func saveResume(userId int64, resumeText string) {
