@@ -17,7 +17,7 @@ RUN go build -ldflags="-s -w" -o service .
 FROM scratch
 
 # Copy binary and config files from /build to root folder of scratch container.
-COPY --from=builder ["/build/service", "/build/.env", "/"]
+COPY --from=builder ["/build/service", "/"]
 
 # Command to run when starting the container.
 ENTRYPOINT ["/service"]
