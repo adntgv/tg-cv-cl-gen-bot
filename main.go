@@ -82,11 +82,14 @@ func main() {
 }
 
 func createResumesFileIfNotExists() {
-	f, err := os.OpenFile("resumes.json", os.O_APPEND|os.O_CREATE|os.O_WRONLY, 0644)
+	_, err := jsonstore.Open("resumes.json")
 	if err != nil {
-		log.Fatal(err)
+		log.Println("createResumesFileIfNotExists", err)
+		ks := &jsonstore.JSONStore{}
+		if err = jsonstore.Save(ks, "resumes.json"); err != nil {
+			panic(err)
+		}
 	}
-	f.Close()
 }
 
 func HelloHandler(w http.ResponseWriter, _ *http.Request) {
